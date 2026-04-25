@@ -4,9 +4,9 @@ const SURVIVAL_LIVES = 3;
 const SPEEDRUN_TIME = 60;
 
 const DIFFICULTY = {
-  easy:   { time: 30, hints: 3, basePoints: 10 },
-  normal: { time: 20, hints: 2, basePoints: 15 },
-  hard:   { time: 10, hints: 1, basePoints: 25 },
+  easy:   { time: 30, hints: 5, basePoints: 10 },
+  normal: { time: 20, hints: 3, basePoints: 15 },
+  hard:   { time: 10, hints: 2, basePoints: 25 },
 };
 
 const GAME_MODES = {
@@ -1217,14 +1217,33 @@ function useHint() {
   void hintArea.offsetWidth;
   hintArea.classList.add('active');
 
-  if (state.hintLevel === 1) {
-    hintArea.textContent = `💡 글자 수: ${q.word.length}자`;
-  } else if (state.hintLevel === 2) {
-    hintArea.textContent = `💡 ${q.hint}`;
-  } else {
-    hintArea.textContent = `💡 첫 글자: "${q.word[0]}"`;
-  }
+  hintArea.textContent = getHintText(q, state.hintLevel);
   setMascot('🤔', '힌트다 멍! 💡');
+}
+
+function getHintText(q, level) {
+  const len = q.word.length;
+  switch (level) {
+    case 1:
+      return `💡 글자 수: ${len}자`;
+    case 2: {
+      const cat = WORD_DATA[q.category || state.selectedCategory];
+      return `💡 카테고리: ${cat.emoji} ${cat.name}`;
+    }
+    case 3:
+      return `💡 의미: ${q.hint}`;
+    case 4:
+      return `💡 첫 글자: "${q.word[0]}"`;
+    case 5:
+      if (len === 1) return `💡 의미: ${q.hint}`;
+      return `💡 마지막 글자: "${q.word[len - 1]}"`;
+    default: {
+      // 6단계 이상: 중간 글자 1개 랜덤
+      if (len <= 2) return `💡 의미: ${q.hint}`;
+      const mid = Math.floor(len / 2);
+      return `💡 ${mid + 1}번째 글자: "${q.word[mid]}"`;
+    }
+  }
 }
 
 // ===== Combo UI =====
