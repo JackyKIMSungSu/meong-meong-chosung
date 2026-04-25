@@ -66,6 +66,35 @@
         <p class="subtitle">멍멍! ㅊㅅㄱㅇ 의 정체는?!</p>
       </div>
 
+      <!-- 출석 스트릭 배너 -->
+      <div id="streak-banner" class="streak-banner">
+        <div class="streak-flame">🔥</div>
+        <div class="streak-info">
+          <div class="streak-count"><span id="streak-days">0</span>일 연속 출석!</div>
+          <div class="streak-next" id="streak-next">다음 보상: 3일 차</div>
+        </div>
+        <div class="streak-milestones" id="streak-milestones">
+          <span class="milestone" data-day="3">3</span>
+          <span class="milestone" data-day="7">7</span>
+          <span class="milestone" data-day="14">14</span>
+          <span class="milestone" data-day="30">30</span>
+        </div>
+      </div>
+
+      <!-- 일일 챌린지 카드 -->
+      <div class="card daily-card" id="daily-card">
+        <div class="daily-header">
+          <span class="daily-icon">🗓️</span>
+          <div class="daily-title-area">
+            <h2 class="daily-title">오늘의 챌린지</h2>
+            <p class="daily-subtitle" id="daily-subtitle">매일 자정에 갱신되는 5문제</p>
+          </div>
+        </div>
+        <button id="daily-start-btn" class="primary-btn daily-btn">
+          <span id="daily-btn-text">도전하기 ⚡</span>
+        </button>
+      </div>
+
       <!-- 게임 모드 -->
       <div class="card">
         <h2>🎮 게임 모드</h2>
@@ -127,9 +156,14 @@
         <span>게임 시작</span><span class="btn-icon">🚀</span>
       </button>
 
-      <button id="badges-btn" class="secondary-btn" style="margin-top:10px;">
-        🏅 업적 보기 (<span id="badge-count">0</span>/<span id="badge-total">0</span>)
-      </button>
+      <div class="aux-buttons">
+        <button id="badges-btn" class="secondary-btn">
+          🏅 업적 (<span id="badge-count">0</span>/<span id="badge-total">0</span>)
+        </button>
+        <button id="collection-btn" class="secondary-btn">
+          📖 도감 (<span id="collection-count">0</span>/<span id="collection-total">0</span>)
+        </button>
+      </div>
     </section>
 
     <!-- 게임 화면 -->
@@ -235,9 +269,30 @@
         </div>
 
         <div class="result-actions">
+          <button id="share-btn" class="primary-btn share-btn-style" style="display:none;">
+            📋 결과 공유
+          </button>
           <button id="retry-btn" class="primary-btn">다시 도전 🔁</button>
           <button id="home-btn" class="secondary-btn">처음으로 🏠</button>
         </div>
+      </div>
+    </section>
+
+    <!-- 단어 도감 화면 -->
+    <section id="collection-screen" class="screen">
+      <div class="result-card">
+        <h1 style="font-family:'Black Han Sans';font-size:32px;margin-bottom:6px;">📖 단어 도감</h1>
+        <p style="color:#868e96;font-weight:700;margin-bottom:20px;">
+          <span id="collection-progress-text">0 / 0</span> 단어 발견 (<span id="collection-percent">0%</span>)
+        </p>
+
+        <div class="collection-progress-bar">
+          <div id="collection-progress-fill" class="collection-progress-fill"></div>
+        </div>
+
+        <div id="collection-list" class="collection-list"></div>
+
+        <button id="collection-back-btn" class="secondary-btn" style="margin-top:20px;">← 돌아가기</button>
       </div>
     </section>
 

@@ -1460,6 +1460,298 @@ body {
   100% { transform: scale(1) rotate(720deg); filter: brightness(1); }
 }
 
+/* ===== 출석 스트릭 배너 ===== */
+.streak-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #ff8c42, #ff6b6b);
+  border: 3px solid #fff;
+  border-radius: 20px;
+  padding: 14px;
+  margin-bottom: 14px;
+  box-shadow: 0 8px 20px rgba(255, 107, 107, 0.35);
+  position: relative;
+}
+
+.streak-banner.cold {
+  background: linear-gradient(135deg, #adb5bd, #868e96);
+  box-shadow: 0 8px 20px rgba(134, 142, 150, 0.3);
+}
+
+.streak-flame {
+  font-size: 40px;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.2));
+  animation: flame-flicker 0.4s ease-in-out infinite;
+  flex: 0 0 auto;
+}
+
+.streak-banner.cold .streak-flame {
+  filter: grayscale(1) opacity(0.6);
+  animation: none;
+}
+
+.streak-info {
+  flex: 1;
+  color: #fff;
+}
+
+.streak-count {
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 22px;
+  letter-spacing: 1px;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  line-height: 1.1;
+}
+
+.streak-count #streak-days {
+  font-size: 28px;
+  color: #ffd93d;
+  -webkit-text-stroke: 1px rgba(0,0,0,0.1);
+}
+
+.streak-next {
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0.9;
+  margin-top: 2px;
+}
+
+.streak-milestones {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.milestone {
+  font-size: 10px;
+  font-weight: 900;
+  background: rgba(255,255,255,0.3);
+  color: #fff;
+  padding: 3px 8px;
+  border-radius: 8px;
+  display: none;
+}
+
+.milestone.next {
+  display: inline-block;
+  background: #ffd93d;
+  color: #5a3e00;
+  animation: milestone-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes milestone-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.1); }
+}
+
+.milestone.reached {
+  display: inline-block;
+  background: rgba(255, 217, 61, 0.4);
+  color: #fff;
+}
+
+/* ===== 일일 챌린지 카드 ===== */
+.daily-card {
+  background: linear-gradient(135deg, #fff, #fff8e1) !important;
+  border: 3px solid #ffd93d !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.daily-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -30%;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(255, 217, 61, 0.3), transparent 70%);
+  pointer-events: none;
+}
+
+.daily-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  position: relative;
+  z-index: 1;
+}
+
+.daily-icon {
+  font-size: 36px;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+  animation: daily-bounce 2s ease-in-out infinite;
+}
+
+@keyframes daily-bounce {
+  0%, 100% { transform: rotate(-5deg) translateY(0); }
+  50%      { transform: rotate(5deg) translateY(-3px); }
+}
+
+.daily-title-area { flex: 1; }
+
+.daily-title {
+  font-size: 20px !important;
+  font-weight: 900;
+  margin-bottom: 2px !important;
+  background: linear-gradient(135deg, #ff6b9d, #ff8c42);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.daily-subtitle {
+  font-size: 12px;
+  font-weight: 700;
+  color: #868e96;
+}
+
+.daily-btn {
+  background: linear-gradient(135deg, #ffd93d, #ff8c42, #ff6b9d) !important;
+  background-size: 200% 200% !important;
+  animation: daily-btn-shine 3s ease infinite;
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes daily-btn-shine {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+
+.daily-btn:disabled {
+  background: linear-gradient(135deg, #adb5bd, #868e96) !important;
+  cursor: not-allowed;
+  opacity: 0.7;
+  animation: none;
+}
+
+.daily-btn:disabled:hover {
+  transform: none;
+}
+
+.daily-result {
+  text-align: center;
+  padding: 8px 0;
+  font-weight: 900;
+  color: #20c997;
+  font-size: 14px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ===== 보조 버튼 그리드 ===== */
+.aux-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.aux-buttons .secondary-btn {
+  font-size: 14px;
+  padding: 14px 8px;
+}
+
+/* ===== 결과 화면 공유 버튼 ===== */
+.share-btn-style {
+  background: linear-gradient(135deg, #4dabf7, #339af0) !important;
+  box-shadow: 0 8px 20px rgba(77, 171, 247, 0.5) !important;
+}
+
+/* ===== 단어 도감 ===== */
+.collection-progress-bar {
+  height: 14px;
+  background: #e9ecef;
+  border-radius: 7px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1) inset;
+}
+
+.collection-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff6b9d, #ffd93d, #4dabf7);
+  background-size: 200% 100%;
+  animation: progress-shine 2s linear infinite;
+  width: 0%;
+  transition: width 0.6s ease;
+  border-radius: 5px;
+}
+
+.collection-list {
+  text-align: left;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.collection-cat {
+  margin-bottom: 16px;
+  background: #f8f9fc;
+  border-radius: 14px;
+  padding: 12px;
+  border: 2px solid #e9ecef;
+}
+
+.collection-cat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.collection-cat-title {
+  font-size: 15px;
+  font-weight: 900;
+  color: #2d3436;
+}
+
+.collection-cat-count {
+  font-size: 12px;
+  font-weight: 900;
+  color: #fff;
+  background: linear-gradient(135deg, #ff6b9d, #ee5a6f);
+  padding: 4px 10px;
+  border-radius: 10px;
+}
+
+.collection-words {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 6px;
+}
+
+.collection-word {
+  background: #fff;
+  border: 2px solid #e9ecef;
+  border-radius: 10px;
+  padding: 6px 4px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  color: #adb5bd;
+  letter-spacing: 1px;
+}
+
+.collection-word.found {
+  background: linear-gradient(135deg, #fef9e7, #ffd93d);
+  border-color: #ffaa00;
+  color: #5a3e00;
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 13px;
+  letter-spacing: 0;
+}
+
+/* 마일스톤 보상 토스트 (배지 토스트 재사용) */
+.milestone-toast .badge-toast-emoji {
+  font-size: 36px;
+}
+
 /* ===== 모바일 ===== */
 @media (max-width: 380px) {
   .title { font-size: 48px; }

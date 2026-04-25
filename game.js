@@ -129,12 +129,22 @@ function loadProgress() {
   try {
     const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
     return {
-      bestScores: data.bestScores || {},  // {mode: number}
+      bestScores: data.bestScores || {},
       badges: data.badges || [],
       itemsUsedAllTime: data.itemsUsedAllTime || 0,
+      lastVisit: data.lastVisit || null,
+      streak: data.streak || 0,
+      bestStreak: data.bestStreak || 0,
+      streakRewardsClaimed: data.streakRewardsClaimed || [],
+      dailyResults: data.dailyResults || {},
+      collection: data.collection || [],
     };
   } catch (e) {
-    return { bestScores: {}, badges: [], itemsUsedAllTime: 0 };
+    return {
+      bestScores: {}, badges: [], itemsUsedAllTime: 0,
+      lastVisit: null, streak: 0, bestStreak: 0,
+      streakRewardsClaimed: [], dailyResults: {}, collection: [],
+    };
   }
 }
 
@@ -151,6 +161,7 @@ const screens = {
   game: $('#game-screen'),
   result: $('#result-screen'),
   badges: $('#badges-screen'),
+  collection: $('#collection-screen'),
 };
 
 // ===== Sound (Web Audio) =====
@@ -232,11 +243,180 @@ const SFX = {
   },
 };
 
+// ===== Date / Daily Helpers =====
+function getTodayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function getYesterdayKey() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function mulberry32(seed) {
+  return function() {
+    seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function dateToSeed(dateKey) {
+  let seed = 0;
+  for (let i = 0; i < dateKey.length; i++) {
+    seed = ((seed * 31) + dateKey.charCodeAt(i)) | 0;
+  }
+  return seed;
+}
+
+const DAILY_QUESTION_COUNT = 5;
+const DAILY_TIME_PER_Q = 30;
+
+function getDailyQuestions(dateKey) {
+  const rand = mulberry32(dateToSeed(dateKey));
+  const allWords = [];
+  Object.entries(WORD_DATA).forEach(([catKey, data]) => {
+    data.words.forEach(w => allWords.push({ ...w, category: catKey }));
+  });
+  const picked = [];
+  const usedIdx = new Set();
+  while (picked.length < DAILY_QUESTION_COUNT && usedIdx.size < allWords.length) {
+    const idx = Math.floor(rand() * allWords.length);
+    if (usedIdx.has(idx)) continue;
+    usedIdx.add(idx);
+    picked.push(allWords[idx]);
+  }
+  return picked;
+}
+
+// ===== Streak =====
+const STREAK_REWARDS = [
+  { day: 3,  emoji: '🎁', name: '3일 출석', items: { time: 1, reveal: 1 } },
+  { day: 7,  emoji: '🎉', name: '7일 출석', items: { time: 2, reveal: 2, double: 1 } },
+  { day: 14, emoji: '🏆', name: '14일 출석', items: { time: 3, reveal: 3, double: 2 } },
+  { day: 30, emoji: '👑', name: '30일 출석 마스터', items: { time: 5, reveal: 5, double: 3 } },
+];
+
+function checkStreak() {
+  const data = loadProgress();
+  const today = getTodayKey();
+  const yesterday = getYesterdayKey();
+
+  if (data.lastVisit === today) {
+    return data.streak;
+  }
+
+  let newStreak;
+  if (data.lastVisit === yesterday) {
+    newStreak = data.streak + 1;
+  } else {
+    newStreak = 1;
+  }
+
+  const bestStreak = Math.max(data.bestStreak, newStreak);
+  const claimed = data.streakRewardsClaimed || [];
+  const grantedItems = { time: 0, reveal: 0, double: 0 };
+  const newRewardEmojis = [];
+
+  STREAK_REWARDS.forEach(r => {
+    if (newStreak >= r.day && !claimed.includes(r.day)) {
+      claimed.push(r.day);
+      Object.entries(r.items).forEach(([k, v]) => {
+        grantedItems[k] = (grantedItems[k] || 0) + v;
+      });
+      newRewardEmojis.push({ emoji: r.emoji, name: r.name });
+    }
+  });
+
+  // 스트릭 끊김 시 claimed 리셋 (다시 도전 가능)
+  if (newStreak === 1) {
+    saveProgress({
+      lastVisit: today,
+      streak: 1,
+      bestStreak,
+      streakRewardsClaimed: [],
+      pendingItems: data.pendingItems || { time: 0, reveal: 0, double: 0 },
+    });
+  } else {
+    // 보상 아이템은 다음 게임에 추가하기 위해 pendingItems에 누적
+    const pending = data.pendingItems || { time: 0, reveal: 0, double: 0 };
+    Object.keys(grantedItems).forEach(k => {
+      pending[k] = (pending[k] || 0) + grantedItems[k];
+    });
+    saveProgress({
+      lastVisit: today,
+      streak: newStreak,
+      bestStreak,
+      streakRewardsClaimed: claimed,
+      pendingItems: pending,
+    });
+  }
+
+  // 마일스톤 보상 토스트 표시
+  if (newRewardEmojis.length > 0) {
+    let delay = 800;
+    newRewardEmojis.forEach(r => {
+      setTimeout(() => {
+        const toast = $('#badge-toast');
+        $('#badge-toast-name').textContent = r.name + ' 보상 획득!';
+        toast.querySelector('.badge-toast-emoji').textContent = r.emoji;
+        toast.classList.add('show');
+        SFX.badge();
+        setTimeout(() => toast.classList.remove('show'), 2800);
+      }, delay);
+      delay += 3200;
+    });
+  }
+
+  return newStreak;
+}
+
+// ===== Word Collection (도감) =====
+function addToCollection(word) {
+  const data = loadProgress();
+  const collection = data.collection || [];
+  if (!collection.includes(word)) {
+    collection.push(word);
+    saveProgress({ collection });
+    setTimeout(() => {
+      showFloatingText(`📖 새 단어!`, '#20c997');
+    }, 400);
+  }
+}
+
+// ===== Pending Items (출석 보상) =====
+function applyPendingItems() {
+  const data = loadProgress();
+  const pending = data.pendingItems || { time: 0, reveal: 0, double: 0 };
+  let total = 0;
+  Object.keys(pending).forEach(k => {
+    if (pending[k] > 0) {
+      state.inventory[k] = (state.inventory[k] || 0) + pending[k];
+      total += pending[k];
+    }
+  });
+  if (total > 0) {
+    saveProgress({ pendingItems: { time: 0, reveal: 0, double: 0 } });
+    setTimeout(() => {
+      showFloatingText(`🎁 출석 보상 ${total}개!`, '#ffd93d');
+    }, 600);
+  }
+}
+
 // ===== Init =====
 function init() {
+  // 출석 체크 → 스트릭 업데이트
+  checkStreak();
+
   renderCategories();
   renderBestRecords();
   renderBadgeCount();
+  renderCollectionCount();
+  renderStreakBanner();
+  renderDailyCard();
   bindEvents();
 }
 
@@ -270,6 +450,69 @@ function renderBadgeCount() {
   const { badges } = loadProgress();
   $('#badge-count').textContent = badges.length;
   $('#badge-total').textContent = Object.keys(BADGES).length;
+}
+
+function getTotalWordCount() {
+  return Object.values(WORD_DATA).reduce((sum, c) => sum + c.words.length, 0);
+}
+
+function renderCollectionCount() {
+  const { collection } = loadProgress();
+  $('#collection-count').textContent = collection.length;
+  $('#collection-total').textContent = getTotalWordCount();
+}
+
+function renderStreakBanner() {
+  const { streak } = loadProgress();
+  const banner = $('#streak-banner');
+  $('#streak-days').textContent = streak;
+
+  if (streak === 0) {
+    banner.classList.add('cold');
+    $('#streak-next').textContent = '오늘 첫 도전을 해보세요!';
+  } else {
+    banner.classList.remove('cold');
+  }
+
+  // 마일스톤 표시
+  const milestones = [3, 7, 14, 30];
+  let nextMilestone = null;
+  document.querySelectorAll('.milestone').forEach(el => {
+    el.classList.remove('next', 'reached');
+    const day = parseInt(el.dataset.day);
+    if (streak >= day) {
+      el.classList.add('reached');
+    } else if (nextMilestone === null) {
+      nextMilestone = day;
+      el.classList.add('next');
+    }
+  });
+
+  if (nextMilestone !== null && streak > 0) {
+    const remain = nextMilestone - streak;
+    $('#streak-next').textContent = `다음 보상까지 ${remain}일! (${nextMilestone}일 차)`;
+  } else if (streak >= 30) {
+    $('#streak-next').textContent = '👑 출석 마스터! 계속 이어가세요!';
+  }
+}
+
+function renderDailyCard() {
+  const today = getTodayKey();
+  const { dailyResults } = loadProgress();
+  const todayResult = dailyResults[today];
+  const btn = $('#daily-start-btn');
+  const subtitle = $('#daily-subtitle');
+  const btnText = $('#daily-btn-text');
+
+  if (todayResult && todayResult.completed) {
+    btn.disabled = true;
+    btnText.textContent = `✅ 클리어! ${todayResult.correct}/${todayResult.total} 정답`;
+    subtitle.textContent = `오늘 점수: ${todayResult.score}점 · 내일 새 챌린지가 옵니다`;
+  } else {
+    btn.disabled = false;
+    btnText.textContent = '도전하기 ⚡';
+    subtitle.textContent = '매일 자정에 갱신되는 5문제 (하루 1번)';
+  }
 }
 
 function bindEvents() {
@@ -342,6 +585,27 @@ function bindEvents() {
     SFX.click();
     showScreen('start');
   });
+
+  // 도감
+  $('#collection-btn').addEventListener('click', () => {
+    SFX.click();
+    renderCollectionScreen();
+    showScreen('collection');
+  });
+  $('#collection-back-btn').addEventListener('click', () => {
+    SFX.click();
+    showScreen('start');
+  });
+
+  // 일일 챌린지
+  $('#daily-start-btn').addEventListener('click', () => {
+    if ($('#daily-start-btn').disabled) return;
+    SFX.click();
+    startDaily();
+  });
+
+  // 결과 공유
+  $('#share-btn').addEventListener('click', shareResult);
 }
 
 // ===== Screen Switch =====
@@ -415,14 +679,17 @@ function startGame() {
   const config = DIFFICULTY[state.difficulty];
   const pool = WORD_DATA[state.selectedCategory].words;
 
+  // 일반 모드일 때만 일일 모드 플래그 해제
+  state.isDailyMode = false;
+
   // 모드별 문제 준비
-  const shuffled = [...pool].sort(() => Math.random() - 0.5);
+  const shuffled = [...pool].sort(() => Math.random() - 0.5).map(w => ({ ...w, category: state.selectedCategory }));
   if (state.mode === 'classic') {
     state.questions = shuffled.slice(0, Math.min(TOTAL_QUESTIONS, pool.length));
   } else {
     // 서바이벌/스피드런: 큰 풀에서 끝없이 (반복 허용)
     state.questions = shuffled.concat(...Array(5).fill(0).map(() =>
-      [...pool].sort(() => Math.random() - 0.5)
+      [...pool].sort(() => Math.random() - 0.5).map(w => ({ ...w, category: state.selectedCategory }))
     ));
   }
 
@@ -440,6 +707,9 @@ function startGame() {
   state.newBadgesThisGame = [];
   state.doubleScoreActive = false;
   state.globalTimeLeft = SPEEDRUN_TIME;
+
+  // 출석 보상 아이템 지급
+  applyPendingItems();
 
   // 모드별 UI
   $('#lives-display').classList.toggle('active', state.mode === 'survival');
@@ -460,6 +730,48 @@ function startGame() {
   if (state.mode === 'speedrun') {
     startGlobalTimer();
   }
+}
+
+function startDaily() {
+  const today = getTodayKey();
+  const { dailyResults } = loadProgress();
+  if (dailyResults[today] && dailyResults[today].completed) {
+    return;
+  }
+
+  // Daily 모드: 클래식 베이스, 쉬움 난이도, 5문제
+  state.mode = 'classic';
+  state.difficulty = 'easy';
+  state.isDailyMode = true;
+  state.questions = getDailyQuestions(today);
+
+  const config = DIFFICULTY[state.difficulty];
+  state.currentIdx = 0;
+  state.score = 0;
+  state.hintsRemaining = config.hints;
+  state.hintsUsedTotal = 0;
+  state.results = [];
+  state.combo = 0;
+  state.maxCombo = 0;
+  state.lives = SURVIVAL_LIVES;
+  state.inventory = { time: 0, reveal: 0, double: 0 };
+  state.itemsUsedTotal = 0;
+  state.currentMascotStage = 0;
+  state.newBadgesThisGame = [];
+  state.doubleScoreActive = false;
+  state.globalTimeLeft = SPEEDRUN_TIME;
+
+  applyPendingItems();
+
+  $('#lives-display').classList.toggle('active', false);
+  $('#progress-label').textContent = '오늘의 챌린지';
+
+  updateLivesUI();
+  updateComboUI();
+  updateInventoryUI();
+
+  showScreen('game');
+  loadQuestion();
 }
 
 function startGlobalTimer() {
@@ -501,8 +813,9 @@ function loadQuestion() {
     state.timeLeft = config.time;
   }
 
-  // 골든 문제 결정 (15% 확률, 클래식 모드만)
-  state.isGolden = state.mode === 'classic' && Math.random() < 0.15 && state.currentIdx > 0;
+  // 골든 문제 결정 (15% 확률, 클래식 모드만, 데일리 제외)
+  state.isGolden = state.mode === 'classic' && !state.isDailyMode &&
+                   Math.random() < 0.15 && state.currentIdx > 0;
 
   // UI 갱신
   if (state.mode === 'speedrun') {
@@ -513,7 +826,11 @@ function loadQuestion() {
     $('#question-count').textContent = `${state.currentIdx + 1} / ${state.questions.length}`;
   }
   $('#score').textContent = state.score;
-  $('#category-tag').textContent = `${WORD_DATA[state.selectedCategory].emoji} ${WORD_DATA[state.selectedCategory].name}`;
+
+  // 카테고리 태그: 문제별 카테고리 우선 (데일리 모드는 문제마다 다름)
+  const tagCat = q.category || state.selectedCategory;
+  const tagInfo = WORD_DATA[tagCat] || WORD_DATA[state.selectedCategory];
+  $('#category-tag').textContent = `${tagInfo.emoji} ${tagInfo.name}`;
 
   // 골든 라운드 표시
   $('#game-main').classList.toggle('golden', state.isGolden);
@@ -741,6 +1058,9 @@ function handleCorrect() {
     skipped: false,
     earned,
   });
+
+  // 단어 도감 추가 (정답 단어 수집)
+  addToCollection(q.word);
 
   // 효과
   $('#chosung-display').classList.add('correct');
@@ -1036,11 +1356,27 @@ function endGame() {
     if (correctCount >= 20) unlockBadge('survivor');
   }
 
-  // 신기록 체크
+  // 데일리 모드 결과 저장
+  if (state.isDailyMode) {
+    const today = getTodayKey();
+    const { dailyResults } = loadProgress();
+    dailyResults[today] = {
+      completed: true,
+      correct: correctCount,
+      total: state.questions.length,
+      score: state.score,
+      maxCombo: state.maxCombo,
+    };
+    saveProgress({ dailyResults });
+  }
+
+  // 신기록 체크 (데일리는 별도)
   const { bestScores } = loadProgress();
-  const isNewRecord = !bestScores[state.mode] || state.score > bestScores[state.mode];
+  const recordKey = state.isDailyMode ? 'daily' : state.mode;
+  const isNewRecord = !state.isDailyMode &&
+                      (!bestScores[recordKey] || state.score > bestScores[recordKey]);
   if (isNewRecord) {
-    bestScores[state.mode] = state.score;
+    bestScores[recordKey] = state.score;
     saveProgress({ bestScores });
   }
 
@@ -1121,7 +1457,91 @@ function endGame() {
     fireConfetti(120);
   }
 
+  // 데일리 모드: 공유 버튼 표시 + 등급 덮어쓰기
+  const shareBtn = $('#share-btn');
+  if (state.isDailyMode) {
+    shareBtn.style.display = 'inline-flex';
+    $('#result-title').textContent = '오늘의 챌린지 완료!';
+    $('#result-grade').textContent = `${correctCount}/${state.questions.length} 정답 · ${state.score}점`;
+    $('#result-emoji').textContent = correctCount === state.questions.length ? '🏆' : (correctCount >= 3 ? '🎉' : '💪');
+  } else {
+    shareBtn.style.display = 'none';
+  }
+
   showScreen('result');
+}
+
+// ===== Collection Screen =====
+function renderCollectionScreen() {
+  const { collection } = loadProgress();
+  const total = getTotalWordCount();
+  const found = collection.length;
+  const percent = total > 0 ? Math.round((found / total) * 100) : 0;
+
+  $('#collection-progress-text').textContent = `${found} / ${total}`;
+  $('#collection-percent').textContent = `${percent}%`;
+  $('#collection-progress-fill').style.width = percent + '%';
+
+  const list = $('#collection-list');
+  list.innerHTML = '';
+
+  Object.entries(WORD_DATA).forEach(([catKey, data]) => {
+    const catFound = data.words.filter(w => collection.includes(w.word)).length;
+    const catTotal = data.words.length;
+    const section = document.createElement('div');
+    section.className = 'collection-cat';
+    section.innerHTML = `
+      <div class="collection-cat-header">
+        <span class="collection-cat-title">${data.emoji} ${data.name}</span>
+        <span class="collection-cat-count">${catFound} / ${catTotal}</span>
+      </div>
+    `;
+    const grid = document.createElement('div');
+    grid.className = 'collection-words';
+    data.words.forEach(w => {
+      const isFound = collection.includes(w.word);
+      const item = document.createElement('div');
+      item.className = 'collection-word' + (isFound ? ' found' : '');
+      if (isFound) {
+        item.textContent = w.word;
+        item.title = w.hint;
+      } else {
+        item.textContent = getChosung(w.word);
+      }
+      grid.appendChild(item);
+    });
+    section.appendChild(grid);
+    list.appendChild(section);
+  });
+}
+
+// ===== Share Result =====
+function shareResult() {
+  const today = getTodayKey();
+  const correctCount = state.results.filter(r => r.correct).length;
+  const total = state.questions.length;
+
+  // 결과 이모지 라인 (정답=🟩, 오답=⬜)
+  const emojiLine = state.results.map(r => r.correct ? '🟩' : '⬜').join('');
+
+  const text = `🐶 멍멍 초성게임 데일리 ${today}\n` +
+               `${correctCount}/${total} · ${state.score}점\n` +
+               `${emojiLine}\n` +
+               `https://jackykimsungsu.github.io/meong-meong-chosung/`;
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = $('#share-btn');
+      const orig = btn.textContent;
+      btn.textContent = '✅ 복사됨!';
+      SFX.click();
+      setTimeout(() => { btn.textContent = orig; }, 2000);
+    }).catch(() => {
+      alert(text);
+    });
+  } else {
+    alert(text);
+  }
 }
 
 // ===== Start =====
