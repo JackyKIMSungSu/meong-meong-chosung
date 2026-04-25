@@ -13,3 +13,6 @@ Thumbs.db
 
 # Local Claude config
 .claude/
+
+# Thumbnail source (only PNG output is committed)
+_thumbnail-source.html

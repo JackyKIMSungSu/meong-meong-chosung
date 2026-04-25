@@ -3,6 +3,10 @@
 > 한글 단어의 **초성**(첫 자음)만 보고 정답을 맞히는 두뇌 웹 게임
 > `ㄱㅊㅉㄱ` → **김치찌개** 🍲
 
+![멍멍 초성게임 썸네일](./thumbnail.png)
+
+🎮 **[지금 바로 플레이하기 →](https://jackykimsungsu.github.io/meong-meong-chosung/)**
+
 [![HTML](https://img.shields.io/badge/HTML5-E34F26?logo=html5&logoColor=white)](.)
 [![CSS](https://img.shields.io/badge/CSS3-1572B6?logo=css3&logoColor=white)](.)
 [![JS](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=black)](.)
