@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>멍멍 초성게임 🐶</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Jua&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- 배경 떠다니는 도형들 -->
+  <div class="bg-shapes" aria-hidden="true">
+    <span class="shape shape-1">⭐</span>
+    <span class="shape shape-2">💫</span>
+    <span class="shape shape-3">🌟</span>
+    <span class="shape shape-4">✨</span>
+    <span class="shape shape-5">🎈</span>
+    <span class="shape shape-6">🎀</span>
+    <span class="shape shape-7">🍭</span>
+    <span class="shape shape-8">🎁</span>
+  </div>
+
+  <!-- 컨페티 / 점수팝업 컨테이너 -->
+  <div id="confetti-container" class="confetti-container" aria-hidden="true"></div>
+  <div id="score-popup-container" class="score-popup-container" aria-hidden="true"></div>
+
+  <!-- 업적 토스트 -->
+  <div id="badge-toast" class="badge-toast">
+    <span class="badge-toast-emoji">🎖️</span>
+    <div class="badge-toast-text">
+      <div class="badge-toast-title">업적 달성!</div>
+      <div class="badge-toast-name" id="badge-toast-name"></div>
+    </div>
+  </div>
+
+  <div class="app">
+    <!-- 시작 화면 -->
+    <section id="start-screen" class="screen active">
+      <div class="logo">
+        <div class="mascot mascot-bounce">
+          <div class="mascot-face">🐶</div>
+          <div class="mascot-shadow"></div>
+        </div>
+        <h1 class="title">
+          <span class="title-char">초</span><span class="title-char">성</span><span class="title-char">게</span><span class="title-char">임</span>
+        </h1>
+        <p class="subtitle">멍멍! ㅊㅅㄱㅇ 의 정체는?!</p>
+      </div>
+
+      <!-- 게임 모드 -->
+      <div class="card">
+        <h2>🎮 게임 모드</h2>
+        <div class="mode-list">
+          <button class="mode-btn active" data-mode="classic">
+            <span class="mode-emoji">🎯</span>
+            <div class="mode-info">
+              <div class="mode-name">클래식</div>
+              <div class="mode-desc">10문제 정복</div>
+            </div>
+            <span class="best-record" id="best-classic">-</span>
+          </button>
+          <button class="mode-btn" data-mode="survival">
+            <span class="mode-emoji">💀</span>
+            <div class="mode-info">
+              <div class="mode-name">서바이벌</div>
+              <div class="mode-desc">라이프 3개 · 무한 도전</div>
+            </div>
+            <span class="best-record" id="best-survival">-</span>
+          </button>
+          <button class="mode-btn" data-mode="speedrun">
+            <span class="mode-emoji">⚡</span>
+            <div class="mode-info">
+              <div class="mode-name">스피드런</div>
+              <div class="mode-desc">60초 안에 최대한!</div>
+            </div>
+            <span class="best-record" id="best-speedrun">-</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>🎯 카테고리 선택</h2>
+        <div id="category-list" class="category-list"></div>
+      </div>
+
+      <div class="card" id="difficulty-card">
+        <h2>🔥 난이도</h2>
+        <div class="difficulty-list">
+          <button class="diff-btn active" data-diff="easy">
+            <span class="diff-emoji">😊</span>
+            <span class="diff-name">쉬움</span>
+            <span class="diff-info">30초 · 힌트3</span>
+          </button>
+          <button class="diff-btn" data-diff="normal">
+            <span class="diff-emoji">😎</span>
+            <span class="diff-name">보통</span>
+            <span class="diff-info">20초 · 힌트2</span>
+          </button>
+          <button class="diff-btn" data-diff="hard">
+            <span class="diff-emoji">🥵</span>
+            <span class="diff-name">어려움</span>
+            <span class="diff-info">10초 · 힌트1</span>
+          </button>
+        </div>
+      </div>
+
+      <button id="start-btn" class="primary-btn pulse-btn">
+        <span>게임 시작</span><span class="btn-icon">🚀</span>
+      </button>
+
+      <button id="badges-btn" class="secondary-btn" style="margin-top:10px;">
+        🏅 업적 보기 (<span id="badge-count">0</span>/<span id="badge-total">0</span>)
+      </button>
+    </section>
+
+    <!-- 게임 화면 -->
+    <section id="game-screen" class="screen">
+      <header class="game-header">
+        <div class="info-box" id="progress-info-box">
+          <span class="info-label" id="progress-label">문제</span>
+          <span id="question-count">1 / 10</span>
+        </div>
+        <div class="info-box score-box">
+          <span class="info-label">점수</span>
+          <span id="score">0</span>
+        </div>
+        <div class="info-box timer-box" id="timer-box">
+          <span class="info-label">시간</span>
+          <span id="timer">30</span>
+        </div>
+      </header>
+
+      <!-- 라이프 표시 (서바이벌 모드 전용) -->
+      <div id="lives-display" class="lives-display"></div>
+
+      <!-- 콤보 + 아이템 -->
+      <div class="status-row">
+        <div id="combo-display" class="combo-display">
+          <span class="combo-flame">🔥</span>
+          <span class="combo-text"><span id="combo-count">0</span> COMBO!</span>
+        </div>
+        <div id="items-bar" class="items-bar"></div>
+      </div>
+
+      <div class="progress-bar">
+        <div id="progress-fill" class="progress-fill"></div>
+      </div>
+
+      <main class="game-main" id="game-main">
+        <!-- 골든 라운드 표시 -->
+        <div id="golden-banner" class="golden-banner">
+          <span>✨ 골든 라운드! 점수 2배! ✨</span>
+        </div>
+
+        <!-- 마스코트 + 말풍선 -->
+        <div class="mascot-area">
+          <div class="speech-bubble" id="speech-bubble">맞혀봐 멍!</div>
+          <div class="mascot mascot-small" id="game-mascot">
+            <div class="mascot-face" id="mascot-face">🐶</div>
+          </div>
+        </div>
+
+        <div class="category-tag" id="category-tag">음식</div>
+
+        <div class="chosung-display" id="chosung-display">
+          <!-- 초성이 여기에 표시됩니다 -->
+        </div>
+
+        <div class="hint-area" id="hint-area"></div>
+
+        <form id="answer-form" class="answer-form" autocomplete="off">
+          <input
+            type="text"
+            id="answer-input"
+            class="answer-input"
+            placeholder="정답을 입력해 봐 멍! 🐾"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+          />
+          <button type="submit" class="primary-btn submit-btn">
+            <span class="btn-icon">✏️</span>
+          </button>
+        </form>
+
+        <div class="action-buttons">
+          <button id="hint-btn" class="action-btn hint-btn-style">
+            <span>💡 힌트</span> <span id="hint-count">(3)</span>
+          </button>
+          <button id="skip-btn" class="action-btn skip-btn-style">⏭ 패스</button>
+          <button id="sound-btn" class="action-btn sound-btn-style" title="효과음">🔊</button>
+        </div>
+
+        <div id="feedback" class="feedback"></div>
+      </main>
+    </section>
+
+    <!-- 결과 화면 -->
+    <section id="result-screen" class="screen">
+      <div class="result-card">
+        <div id="result-emoji" class="result-emoji">🎉</div>
+        <h1 id="result-title">게임 종료!</h1>
+        <p id="result-grade" class="result-grade">멋져요!</p>
+
+        <div id="new-record-banner" class="new-record-banner">🏆 신기록 달성!</div>
+
+        <div class="result-stats" id="result-stats">
+          <!-- 동적으로 생성 -->
+        </div>
+
+        <div id="new-badges" class="new-badges"></div>
+
+        <div class="review-section">
+          <h3>📋 풀이 내역</h3>
+          <ul id="review-list" class="review-list"></ul>
+        </div>
+
+        <div class="result-actions">
+          <button id="retry-btn" class="primary-btn">다시 도전 🔁</button>
+          <button id="home-btn" class="secondary-btn">처음으로 🏠</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 업적 화면 -->
+    <section id="badges-screen" class="screen">
+      <div class="result-card">
+        <h1 style="font-family:'Black Han Sans';font-size:32px;margin-bottom:20px;">🏅 업적</h1>
+        <div id="badges-grid" class="badges-grid"></div>
+        <button id="badges-back-btn" class="secondary-btn" style="margin-top:20px;">← 돌아가기</button>
+      </div>
+    </section>
+  </div>
+
+  <script src="words.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
